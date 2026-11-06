@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "418347097835",
+    "project_id": "bank-mini-rumput",
+    "storage_bucket": "bank-mini-rumput.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418347097835:android:9c42c9380716171bdfe8ae",
+        "android_client_info": {
+          "package_name": "tech.rumput.bankmini"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "418347097835-04u09164m68atrthg908gl5slg2ppfvs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9JdviKHshfpETTK48pJ9VM-yk1odWA-M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "418347097835-04u09164m68atrthg908gl5slg2ppfvs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "418347097835-45an6svi5ibjfl399dl4g4448g0g29un.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "tech.rumput.bankmini"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

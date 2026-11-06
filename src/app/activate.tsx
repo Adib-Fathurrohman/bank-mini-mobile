@@ -9,19 +9,12 @@ import { auth } from '@/lib/firebase'
 import { firebaseMessage, freshIdToken } from '@/session/firebaseAuth'
 import { useSession } from '@/session/SessionProvider'
 
-/** Messages for the activation refusals (API.md `POST /customer/activation`). */
-const ACTIVATION_MESSAGES: Record<string, string> = {
-  activation_mismatch:
-    'NIS tidak cocok dengan email akun ini. Periksa NIS di kartu pelajar, atau masuk dengan email yang didaftarkan sekolah.',
-  already_activated:
-    'Rekening ini sudah diaktifkan dengan akun Google atau email lain. Masuk dengan akun tersebut, atau hubungi petugas.',
-  identity_already_linked: 'Akun ini sudah terhubung ke rekening lain. Gunakan akun lain atau hubungi petugas.',
-  account_inactive: 'Rekening ini sudah ditutup.',
-}
+/** Refusals that need a new Firebase sign-in (§15.10 "Activation screen"). */
+const SIGN_IN_AGAIN = ['firebase_token_invalid', 'provider_not_allowed', 'account_inactive']
 
 /** First sign-in: link the Firebase account to the account with this NIS. */
 export default function ActivateScreen() {
-  const { firebaseUser, startSession } = useSession()
+  const { firebaseUser, startSession, signOut: endSession } = useSession()
   const [nis, setNis] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +34,14 @@ export default function ActivateScreen() {
         router.replace('/verify-email')
         return
       }
-      setError(isApiError(e) && e.code && ACTIVATION_MESSAGES[e.code] ? ACTIVATION_MESSAGES[e.code]! : firebaseMessage(e))
+      if (isApiError(e) && e.code && SIGN_IN_AGAIN.includes(e.code)) {
+        // Back to sign-in, with the backend's message there.
+        await endSession({ reason: e.message })
+        return
+      }
+      // activation_mismatch, already_activated, identity_already_linked, auth_unavailable, ...:
+      // the backend's message as returned.
+      setError(firebaseMessage(e))
     } finally {
       setPending(false)
     }

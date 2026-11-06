@@ -13,7 +13,7 @@ export function ApprovalBanner() {
   const pathname = usePathname()
   const approvals = useOpenApprovals()
   const pending = approvals.data?.requests.find((r) => r.status === 'pending')
-  if (!pending || pathname.startsWith('/approval')) return null
+  if (!pending || pathname.startsWith('/approval')) return null // also covers the /approvals tab
 
   return (
     <View style={styles.wrap}>

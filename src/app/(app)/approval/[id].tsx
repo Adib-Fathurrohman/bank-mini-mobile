@@ -3,11 +3,12 @@ import { StyleSheet, Text, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as customerApi from '@/api/customer'
-import { isApiError, type ApiError } from '@/api/errors'
+import type { ApiError } from '@/api/errors'
 import type { WithdrawalAuthorization } from '@/api/types'
 import { PinPad } from '@/components/PinPad'
 import { Body, Button, Card, Loading, Muted, Notice, Row, Screen } from '@/components/ui'
 import { keys, useRefreshAccount } from '@/features/queries'
+import { useSession } from '@/session/SessionProvider'
 import { formatCountdown, formatDateTime, formatRupiah, isInFuture } from '@/lib/format'
 import { colors } from '@/theme'
 
@@ -39,6 +40,7 @@ export default function ApprovalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const queryClient = useQueryClient()
   const refreshAccount = useRefreshAccount()
+  const { refreshCustomer } = useSession()
   const [pin, setPin] = useState('')
   const [confirmReject, setConfirmReject] = useState(false)
 
@@ -64,6 +66,8 @@ export default function ApprovalScreen() {
     onError: (error) => {
       // No longer pending (expired, cancelled): show the current state.
       if (error.requestStatus) void request.refetch()
+      // The PIN was reset by an administrator: the session moves to PIN creation.
+      if (error.code === 'pin_not_set') void refreshCustomer().catch(() => undefined)
     },
     onSettled: () => setPin(''),
   })
@@ -174,9 +178,6 @@ export default function ApprovalScreen() {
             </Button>
           )}
         </>
-      )}
-      {isApiError(pinError) && pinError.code === 'pin_not_set' && (
-        <Notice tone="warning">PIN belum dibuat. Buka ulang aplikasi untuk membuat PIN.</Notice>
       )}
     </Screen>
   )

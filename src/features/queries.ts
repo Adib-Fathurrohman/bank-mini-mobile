@@ -1,8 +1,10 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
+import { useIsFocused } from 'expo-router'
 import * as customerApi from '@/api/customer'
 import type { TransactionType } from '@/api/types'
 import { APPROVAL_POLL_MS } from '@/lib/config'
+import { pushSupported } from '@/push/messaging'
 
 export const keys = {
   balance: ['balance'] as const,
@@ -51,16 +53,34 @@ export function useCard() {
   return useQuery({ queryKey: keys.card, queryFn: async () => (await customerApi.fetchCard()).data, staleTime: 5 * 60_000 })
 }
 
-/** Open withdrawal requests, polled while the app is in the foreground (no push notifications, L19). */
+async function fetchOpenApprovals() {
+  const received = Date.now()
+  const result = await customerApi.fetchAuthorizations()
+  return { requests: result.data, received }
+}
+
+/**
+ * Open withdrawal requests, for the banner and the home screen. Phones learn
+ * about a new request from the push (which refreshes this) and check again on
+ * start and when the app returns to the foreground; they do not poll here
+ * (FRONTEND_HANDOFF.md §15.11). The web build has no push, so it polls.
+ */
 export function useOpenApprovals() {
   return useQuery({
     queryKey: keys.approvals,
-    queryFn: async () => {
-      const received = Date.now()
-      const result = await customerApi.fetchAuthorizations()
-      return { requests: result.data, received }
-    },
-    refetchInterval: APPROVAL_POLL_MS,
+    queryFn: fetchOpenApprovals,
+    refetchInterval: pushSupported ? false : APPROVAL_POLL_MS,
+    staleTime: 0,
+  })
+}
+
+/** The approvals screen: polls every few seconds while it is open, the fallback for a missed push. */
+export function useApprovalsScreen() {
+  const focused = useIsFocused()
+  return useQuery({
+    queryKey: keys.approvals,
+    queryFn: fetchOpenApprovals,
+    refetchInterval: focused ? APPROVAL_POLL_MS : false,
     staleTime: 0,
   })
 }

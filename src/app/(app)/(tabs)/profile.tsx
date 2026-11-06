@@ -3,6 +3,7 @@ import { View } from 'react-native'
 import { router } from 'expo-router'
 import { Button, Card, Eyebrow, Row, Screen, Title } from '@/components/ui'
 import { formatDateTime } from '@/lib/format'
+import { NotificationSwitch } from '@/push/NotificationSwitch'
 import { useSession } from '@/session/SessionProvider'
 
 /** The account (`GET /customer/me`) and the security actions. */
@@ -39,6 +40,7 @@ export default function ProfileScreen() {
 
       <View style={{ gap: 10 }}>
         <Eyebrow>Keamanan</Eyebrow>
+        <NotificationSwitch />
         <Button variant="secondary" onPress={() => router.push('/change-pin')}>
           Ubah PIN
         </Button>

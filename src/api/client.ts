@@ -5,7 +5,7 @@ import { errorFromResponse, networkError } from './errors'
 // when the backend answers 401 so it can end the session.
 
 let token: string | null = null
-let onUnauthorized: (() => void) | null = null
+let onSessionEnded: ((message: string) => void) | null = null
 
 export function setApiToken(value: string | null) {
   token = value
@@ -15,8 +15,9 @@ export function getApiToken(): string | null {
   return token
 }
 
-export function setUnauthorizedHandler(handler: (() => void) | null) {
-  onUnauthorized = handler
+/** Told when the backend ends the session, with the message to show at sign-in. */
+export function setSessionEndedHandler(handler: ((message: string) => void) | null) {
+  onSessionEnded = handler
 }
 
 type Query = Record<string, string | number | undefined>
@@ -67,10 +68,11 @@ async function request<T>(method: string, path: string, options: { body?: unknow
 
   if (!response.ok) {
     const error = errorFromResponse(response.status, body)
-    // A 401 on an authenticated call means the backend session is over. The
-    // public auth endpoints answer 401 for a bad Firebase token instead.
-    if (response.status === 401 && token && !path.startsWith('/customer/auth') && path !== '/customer/activation') {
-      onUnauthorized?.()
+    // A 401 or 403 without a `code` on an authenticated call ends the session:
+    // expired token, or a closed account (EnsureCustomer). Refusals with a code are
+    // about the Firebase sign-in or the PIN and leave the session alone (§10, §15.10).
+    if ((response.status === 401 || response.status === 403) && token && !error.code) {
+      onSessionEnded?.(response.status === 401 ? 'Sesi Anda telah berakhir. Silakan masuk kembali.' : error.message)
     }
     throw error
   }
@@ -80,4 +82,5 @@ async function request<T>(method: string, path: string, options: { body?: unknow
 export const api = {
   get: <T>(path: string, query?: Query) => request<T>('GET', path, { query }),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, { body: body ?? {} }),
+  delete: <T>(path: string, body?: unknown) => request<T>('DELETE', path, { body: body ?? {} }),
 }

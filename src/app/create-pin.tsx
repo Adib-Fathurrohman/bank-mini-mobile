@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View } from 'react-native'
 import * as customerApi from '@/api/customer'
 import { isApiError } from '@/api/errors'
-import { PinPad } from '@/components/PinPad'
+import { PinPad, PinPadArea } from '@/components/PinPad'
 import { Body, Button, LinkButton, Notice, Screen, Title } from '@/components/ui'
 import { FirebaseSignInRequired, firebaseMessage, freshIdToken } from '@/session/firebaseAuth'
 import { useSession } from '@/session/SessionProvider'
@@ -35,13 +35,8 @@ export default function CreatePinScreen() {
       const signInAgain =
         e instanceof FirebaseSignInRequired || (isApiError(e) && (e.code === 'identity_mismatch' || e.code === 'firebase_token_invalid'))
       setNeedsSignIn(signInAgain)
-      setError(
-        isApiError(e) && e.code === 'identity_mismatch'
-          ? 'Akun yang sedang masuk bukan akun rekening ini. Masuk lagi dengan akun yang benar.'
-          : isApiError(e) && e.kind === 'validation'
-            ? (e.field('pin') ?? e.message)
-            : firebaseMessage(e),
-      )
+      // The backend's message as returned (identity_mismatch, firebase_token_invalid, ...).
+      setError(isApiError(e) && e.kind === 'validation' ? (e.field('pin') ?? e.message) : firebaseMessage(e))
       setFirst(null)
     } finally {
       setPin('')
@@ -65,7 +60,7 @@ export default function CreatePinScreen() {
   }
 
   return (
-    <Screen>
+    <Screen fill>
       <View style={{ gap: 6 }}>
         <Title>{first === null ? 'Buat PIN' : 'Ulangi PIN'}</Title>
         <Body>
@@ -75,22 +70,24 @@ export default function CreatePinScreen() {
         </Body>
       </View>
       {error && <Notice>{error}</Notice>}
-      {needsSignIn ? (
-        <Button onPress={() => void signOut()}>Masuk lagi</Button>
-      ) : (
-        <PinPad label={first === null ? 'PIN baru' : 'Ulangi PIN'} value={pin} onChange={setPin} onComplete={onComplete} disabled={pending} />
-      )}
-      {first !== null && !pending && (
-        <LinkButton
-          onPress={() => {
-            setFirst(null)
-            setPin('')
-          }}
-        >
-          Mulai ulang
-        </LinkButton>
-      )}
-      <LinkButton onPress={() => void signOut()}>Keluar</LinkButton>
+      <PinPadArea>
+        {needsSignIn ? (
+          <Button onPress={() => void signOut()}>Masuk lagi</Button>
+        ) : (
+          <PinPad label={first === null ? 'PIN baru' : 'Ulangi PIN'} value={pin} onChange={setPin} onComplete={onComplete} disabled={pending} />
+        )}
+        {first !== null && !pending && (
+          <LinkButton
+            onPress={() => {
+              setFirst(null)
+              setPin('')
+            }}
+          >
+            Mulai ulang
+          </LinkButton>
+        )}
+        <LinkButton onPress={() => void signOut()}>Keluar</LinkButton>
+      </PinPadArea>
     </Screen>
   )
 }

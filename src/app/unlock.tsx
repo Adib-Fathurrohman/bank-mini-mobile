@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { View } from 'react-native'
 import * as customerApi from '@/api/customer'
 import { isApiError } from '@/api/errors'
-import { PinPad } from '@/components/PinPad'
+import { PinPad, PinPadArea } from '@/components/PinPad'
 import { Brand } from '@/components/Brand'
 import { Body, LinkButton, Muted, Notice, Screen, Title } from '@/components/ui'
 import { formatDateTime, isInFuture } from '@/lib/format'
@@ -41,7 +41,7 @@ export default function UnlockScreen() {
   const locked = isInFuture(lockedUntil)
 
   return (
-    <Screen>
+    <Screen fill>
       <Brand />
       <View style={{ gap: 6, marginTop: 8 }}>
         <Title>Masukkan PIN</Title>
@@ -54,9 +54,11 @@ export default function UnlockScreen() {
       ) : (
         error && <Notice>{error}</Notice>
       )}
-      <PinPad label="PIN" value={pin} onChange={setPin} onComplete={(v) => void submit(v)} disabled={pending || locked} />
-      <LinkButton onPress={() => void signOut()}>Keluar dan masuk dengan akun lain</LinkButton>
-      <Muted style={{ textAlign: 'center' }}>Lupa PIN? Minta petugas bank mini untuk mereset.</Muted>
+      <PinPadArea>
+        <PinPad label="PIN" value={pin} onChange={setPin} onComplete={(v) => void submit(v)} disabled={pending || locked} />
+        <LinkButton onPress={() => void signOut()}>Keluar dan masuk dengan akun lain</LinkButton>
+        <Muted style={{ textAlign: 'center' }}>Lupa PIN? Minta petugas bank mini untuk mereset.</Muted>
+      </PinPadArea>
     </Screen>
   )
 }

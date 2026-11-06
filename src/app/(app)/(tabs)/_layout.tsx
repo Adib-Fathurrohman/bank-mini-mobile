@@ -21,6 +21,7 @@ export default function TabsLayout() {
         }}
       >
         <Tabs.Screen name="index" options={{ title: 'Beranda', tabBarIcon: ({ color }) => <Icon name="home" color={color} /> }} />
+        <Tabs.Screen name="approvals" options={{ title: 'Persetujuan', tabBarIcon: ({ color }) => <Icon name="phone" color={color} /> }} />
         <Tabs.Screen name="history" options={{ title: 'Riwayat', tabBarIcon: ({ color }) => <Icon name="list" color={color} /> }} />
         <Tabs.Screen name="card" options={{ title: 'Kartu', tabBarIcon: ({ color }) => <Icon name="card" color={color} /> }} />
         <Tabs.Screen name="profile" options={{ title: 'Akun', tabBarIcon: ({ color }) => <Icon name="user" color={color} /> }} />

@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { isApiError } from '@/api/errors'
 import { Body, Button, Loading, Screen, Title } from '@/components/ui'
+import { PushManager } from '@/push/PushManager'
 import { SessionProvider, useSession } from '@/session/SessionProvider'
 import { colors } from '@/theme'
 
@@ -79,7 +80,10 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
           <StatusBar style="dark" />
-          <Navigator />
+          <View style={{ flex: 1 }}>
+            <Navigator />
+            <PushManager />
+          </View>
         </SessionProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

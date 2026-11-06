@@ -87,6 +87,20 @@ export function rejectAuthorization(id: string) {
   return api.post<Single<WithdrawalAuthorization>>(`/customer/withdrawal-authorizations/${id}/reject`)
 }
 
+/**
+ * The phone's FCM token, so the backend pushes new withdrawal requests
+ * (FRONTEND_HANDOFF.md §15.11). 201 when new, 200 when already known.
+ * Logout removes it on the server; no call is needed then.
+ */
+export function registerPushToken(token: string, platform: 'android' | 'ios') {
+  return api.post<MessageResponse>('/customer/push-tokens', { token, platform })
+}
+
+/** The "Notifikasi" switch turned off: no more pushes to this phone. */
+export function unregisterPushToken(token: string) {
+  return api.delete<MessageResponse>('/customer/push-tokens', { token })
+}
+
 export function logout(allDevices: boolean) {
   return api.post<MessageResponse>(allDevices ? '/customer/logout-all' : '/customer/logout')
 }

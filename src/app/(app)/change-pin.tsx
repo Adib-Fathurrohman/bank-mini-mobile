@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { router } from 'expo-router'
 import * as customerApi from '@/api/customer'
 import { isApiError } from '@/api/errors'
-import { PinPad } from '@/components/PinPad'
+import { PinPad, PinPadArea } from '@/components/PinPad'
 import { Body, Button, LinkButton, Notice, Screen, Title } from '@/components/ui'
 import { formatDateTime, isInFuture } from '@/lib/format'
+import { useSession } from '@/session/SessionProvider'
 
 type Step = 'current' | 'new' | 'confirm'
 
@@ -16,6 +17,7 @@ const STEP_TEXT: Record<Step, { title: string; body: string }> = {
 
 /** `POST /customer/pin`. A wrong current PIN counts toward the same lock as unlock and approvals. */
 export default function ChangePinScreen() {
+  const { refreshCustomer } = useSession()
   const [step, setStep] = useState<Step>('current')
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -39,6 +41,11 @@ export default function ChangePinScreen() {
       await customerApi.changePin(current, next, confirmation)
       setDone(true)
     } catch (e) {
+      // No PIN any more (reset by an administrator): the session moves to PIN creation.
+      if (isApiError(e) && e.code === 'pin_not_set') {
+        await refreshCustomer().catch(() => undefined)
+        return
+      }
       if (isApiError(e) && e.pinFailure) setLockedUntil(e.pinFailure.pin_locked_until)
       restart(isApiError(e) ? (e.kind === 'validation' ? (e.field('new_pin') ?? e.message) : e.message) : 'PIN tidak diubah. Coba lagi.')
     } finally {
@@ -76,7 +83,7 @@ export default function ChangePinScreen() {
 
   const locked = isInFuture(lockedUntil)
   return (
-    <Screen edges={['bottom']}>
+    <Screen edges={['bottom']} fill>
       <Title>{STEP_TEXT[step].title}</Title>
       <Body>{STEP_TEXT[step].body}</Body>
       {locked && lockedUntil ? (
@@ -84,8 +91,10 @@ export default function ChangePinScreen() {
       ) : (
         error && <Notice>{error}</Notice>
       )}
-      <PinPad label={STEP_TEXT[step].title} value={pin} onChange={setPin} onComplete={onComplete} disabled={pending || locked} />
-      {step !== 'current' && <LinkButton onPress={() => restart(null)}>Mulai ulang</LinkButton>}
+      <PinPadArea>
+        <PinPad label={STEP_TEXT[step].title} value={pin} onChange={setPin} onComplete={onComplete} disabled={pending || locked} />
+        {step !== 'current' && <LinkButton onPress={() => restart(null)}>Mulai ulang</LinkButton>}
+      </PinPadArea>
     </Screen>
   )
 }

@@ -22,13 +22,16 @@ export function Screen({
   refreshControl,
   edges = ['top', 'bottom'],
   scroll = true,
+  fill = false,
 }: {
   children: ReactNode
   refreshControl?: React.ReactElement<RefreshControlProps>
   edges?: ('top' | 'bottom')[]
   scroll?: boolean
+  /** The column takes the whole height, so a child with `flex: 1` can use the space left. */
+  fill?: boolean
 }) {
-  const content = <View style={styles.column}>{children}</View>
+  const content = <View style={[styles.column, fill && { flexGrow: 1 }]}>{children}</View>
   return (
     <SafeAreaView style={styles.screen} edges={edges}>
       {scroll ? (

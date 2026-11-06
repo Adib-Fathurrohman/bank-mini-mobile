@@ -93,6 +93,7 @@ export function PinPad({
 }
 
 const styles = StyleSheet.create({
+  area: { flex: 1, justifyContent: 'center', gap: 16, paddingBottom: 24 },
   wrap: { alignItems: 'center', gap: 24 },
   dots: { flexDirection: 'row', gap: 14, paddingVertical: 4 },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 1.5, borderColor: colors.ink400 },
@@ -111,3 +112,11 @@ const styles = StyleSheet.create({
   keyText: { fontSize: 24, fontWeight: '500', color: colors.ink900 },
   delText: { fontSize: 14, fontWeight: '600', color: colors.ink600 },
 })
+
+/**
+ * The pad and the links under it, centred in the space left below the title,
+ * where a thumb reaches it (inside a `<Screen fill>`).
+ */
+export function PinPadArea({ children }: { children: React.ReactNode }) {
+  return <View style={styles.area}>{children}</View>
+}

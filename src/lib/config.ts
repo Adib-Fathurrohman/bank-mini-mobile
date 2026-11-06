@@ -14,5 +14,5 @@ export const API_URL = (process.env.EXPO_PUBLIC_API_URL || defaultApiUrl()).repl
 /** After this long in the background the app asks for the PIN again. */
 export const LOCK_AFTER_MS = 60_000
 
-/** How often the app checks for a withdrawal the teller started (API.md: every 3–5 s). */
+/** How often the approvals screen checks for withdrawal requests while open (API.md: every 3–5 s; the fallback for a missed push). */
 export const APPROVAL_POLL_MS = 4_000

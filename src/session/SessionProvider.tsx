@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth'
-import { setApiToken, setUnauthorizedHandler } from '@/api/client'
+import { setApiToken, setSessionEndedHandler } from '@/api/client'
 import * as customerApi from '@/api/customer'
 import { isApiError } from '@/api/errors'
 import type { Customer, CustomerSession } from '@/api/types'
@@ -87,19 +87,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [clearLocal],
   )
 
-  // The backend session is over (401): a full Firebase sign-in is required,
-  // never a silent exchange of the cached Firebase session (§15.10).
-  const endedRef = useRef<() => void>(() => undefined)
+  // The backend ended the session (expired, or the account was closed): a full
+  // Firebase sign-in is required, never a silent exchange of the cached Firebase
+  // session (§15.10).
+  const endedRef = useRef<(message: string) => void>(() => undefined)
   useEffect(() => {
-    endedRef.current = () => {
+    endedRef.current = (message) => {
       void firebaseSignOut(auth).catch(() => undefined)
       void clearLocal()
-      setSignedOutReason('Sesi Anda telah berakhir. Silakan masuk kembali.')
+      setSignedOutReason(message)
     }
   }, [clearLocal])
   useEffect(() => {
-    setUnauthorizedHandler(() => endedRef.current())
-    return () => setUnauthorizedHandler(null)
+    setSessionEndedHandler((message) => endedRef.current(message))
+    return () => setSessionEndedHandler(null)
   }, [])
 
   // Restore a stored session and load the customer.
@@ -143,7 +144,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
-          endedRef.current()
+          endedRef.current('Sesi Anda telah berakhir. Silakan masuk kembali.')
         } else if (backgroundSince !== null && Date.now() - backgroundSince >= LOCK_AFTER_MS) {
           setUnlocked(false)
         }
