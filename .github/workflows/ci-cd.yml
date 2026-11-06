@@ -1,0 +1,87 @@
+# Checks the app on every push and pull request; deploys the web build
+# (app.rumput.tech) when the `production` branch is pushed. Setup: DEPLOY.md.
+name: CI/CD
+
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+    branches: [main, production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  check:
+    name: Typecheck, lint, web build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      # A production web build calls /api on its own origin (src/lib/config.ts).
+      - run: npm run build:web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: customer-web
+          path: dist
+          retention-days: 7
+
+  deploy:
+    name: Deploy the web build
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production-customer-web-deploy
+      cancel-in-progress: false
+    env:
+      CUSTOMER_WEB_PATH: ${{ vars.CUSTOMER_WEB_PATH || '/var/www/bank-mini-app' }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+      TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: customer-web
+          path: customer-web
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::DEPLOY_KNOWN_HOSTS is not set; trusting the host key from ssh-keyscan."
+            ssh-keyscan -p "$DEPLOY_PORT" "$HOST" > ~/.ssh/known_hosts
+          fi
+          chmod 600 ~/.ssh/known_hosts
+          echo "SSH_CMD=ssh -i $HOME/.ssh/deploy_key -p $DEPLOY_PORT -o BatchMode=yes" >> "$GITHUB_ENV"
+
+      # Two passes so open pages keep working: first the new hashed files next to
+      # the old ones, then index.html and removal of files no longer built.
+      - name: Upload
+        run: |
+          rsync -rz --exclude=index.html --rsync-path="mkdir -p '$CUSTOMER_WEB_PATH' && rsync" -e "$SSH_CMD" customer-web/ "$TARGET:$CUSTOMER_WEB_PATH/"
+          rsync -rz --delete-after -e "$SSH_CMD" customer-web/ "$TARGET:$CUSTOMER_WEB_PATH/"
+
+      - name: Make the files readable by nginx
+        run: $SSH_CMD "$TARGET" "chmod -R a+rX '$CUSTOMER_WEB_PATH'"
