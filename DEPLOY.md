@@ -1,81 +1,139 @@
-# Deployment and releases
+# Releases
 
-Two outputs from this repository:
+The only distributed output of this repository is the **Android APK**. It is published on
+the repository's GitHub **Releases** page, and the APK talks to
+**https://api-bank.rumput.tech/api**. No web build of this app is deployed: the API's CORS
+allows only the staff site `https://bank.rumput.tech`, so a web build on another origin
+would be blocked.
 
-| Output | How | Where |
+A release goes through four steps:
+
+1. Tag `vX.Y.Z` on `main`.
+2. Build the APK of that tag with **EAS Build** (profile `preview`).
+3. Verify the APK.
+4. Publish it with `gh release create`.
+
+GitHub Actions is not used (see [Legacy](#legacy)).
+
+## Versions
+
+| Field | Where | Rule |
 | --- | --- | --- |
-| Web build | push to the `production` branch → [.github/workflows/ci-cd.yml](.github/workflows/ci-cd.yml) | https://app.rumput.tech (`/var/www/bank-mini-app` on the VPS) |
-| Android APK | push a tag `v*` (e.g. `v1.0.0`) → [.github/workflows/release.yml](.github/workflows/release.yml) | the repository's **Releases** page |
+| Version name | `app.json` → `expo.version` (and `package.json`) | `0.1.0` for tag `v0.1.0` |
+| Version code | `app.json` → `expo.android.versionCode` | +1 for every APK given to anyone, never reused (`eas.json` uses `appVersionSource: local`) |
+| Package | `tech.rumput.bankmini` | Never changes |
 
-Every push and pull request to `main` and `production` runs the typecheck, lint and web build.
+## Build profiles ([eas.json](eas.json))
 
-The API is deployed from `bank-mini-laravel`, the staff web app from `ukk_bank_mini`.
+| Profile | Output | API |
+| --- | --- | --- |
+| `development` | Dev client APK (debug, Metro) | `http://10.0.2.2:8000/api` (emulator → local backend) |
+| `preview` | Release APK, internal distribution | `https://api-bank.rumput.tech/api` |
+| `production` | AAB, for a future Play Store listing | `https://api-bank.rumput.tech/api` |
 
-## 1. Web build (app.rumput.tech)
+`EXPO_PUBLIC_API_URL` is set in each profile. A release build without it still uses
+`https://api-bank.rumput.tech/api`, the default in [src/lib/config.ts](src/lib/config.ts).
 
-GitHub → Settings → Environments → **`production`**, with the same secrets as the other two
-repositories:
+## 1. Build the APK (EAS)
 
-| Secret | Value |
-| --- | --- |
-| `DEPLOY_HOST` | `rumput.tech` |
-| `DEPLOY_USER` | SSH user, e.g. `root` |
-| `DEPLOY_SSH_KEY` | Private deploy key |
-| `DEPLOY_KNOWN_HOSTS` | Output of `ssh-keyscan rumput.tech` (recommended) |
-
-Variables (optional): `CUSTOMER_WEB_PATH` (default `/var/www/bank-mini-app`), `DEPLOY_PORT` (`22`).
-
-nginx on the VPS, once ([deploy/nginx/app.rumput.tech.conf](deploy/nginx/app.rumput.tech.conf)
-serves the app and sends `/api` to Laravel on the same origin):
+You need an Expo account. Run `npx eas-cli@latest login` once; the project is linked
+through `expo.extra.eas.projectId` in `app.json`.
 
 ```bash
-cp deploy/nginx/app.rumput.tech.conf /etc/nginx/sites-available/app.rumput.tech
-ln -s /etc/nginx/sites-available/app.rumput.tech /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
-certbot --nginx -d app.rumput.tech
+V=0.1.0
+git tag -a v$V -m "v$V" && git push origin main v$V
+rm -rf /tmp/mobile-build && git clone --depth 1 --branch v$V https://github.com/Adib-Fathurrohman/bank-mini-mobile /tmp/mobile-build
+cd /tmp/mobile-build && npm ci
+npx eas-cli@latest build --platform android --profile preview --non-interactive --wait
 ```
 
-DNS: `A app → 179.197.249.250`, `AAAA app → 2a02:4780:5e:7723::1`.
+The build ID is printed and shown on expo.dev. Download the APK from the build page, or with
+`eas build:view <id>`, and name it `rumput-bank-mini-android-vX.Y.Z.apk`.
 
-## 2. Android releases
+### Release key
 
-The release build embeds the JavaScript and calls `https://bank.rumput.tech/api`. It is signed
-with your **release key**, made once and kept safe: every later version must be signed with
-the same key, or phones refuse the update.
+EAS created and keeps the Android **release key** (upload keystore) for
+`tech.rumput.bankmini`. Every later version must be signed with the same key, or
+installed phones refuse the update.
+
+- Back up the key with `npx eas-cli@latest credentials` → Android → `preview`/`production`
+  → *Download credentials*. Store it outside every repository with mode 600, for example
+  `~/.bank-mini/`, and keep a copy offline. The repositories never contain it (`*.jks` is
+  git-ignored).
+- Read its fingerprints with `eas credentials`, or from the APK:
+  `apksigner verify --print-certs app.apk`.
+
+### Firebase fingerprints (Google sign-in)
+
+Email/password sign-in and push (FCM) work without this. **Google sign-in** on Android
+works only if the release key's SHA-1 and SHA-256 are registered for the Android app
+`tech.rumput.bankmini` in Firebase project `bank-mini-rumput`:
 
 ```bash
-keytool -genkeypair -v -storetype JKS -keystore bank-mini-release.jks \
-  -alias bank-mini -keyalg RSA -keysize 2048 -validity 10000
-base64 -i bank-mini-release.jks | pbcopy      # copies it for the secret below
+firebase apps:android:sha:create 1:418347097835:android:9c42c9380716171bdfe8ae <SHA-1> --project bank-mini-rumput
+firebase apps:android:sha:create 1:418347097835:android:9c42c9380716171bdfe8ae <SHA-256> --project bank-mini-rumput
+firebase apps:sdkconfig ANDROID 1:418347097835:android:9c42c9380716171bdfe8ae --project bank-mini-rumput > google-services.json
 ```
 
-Repository secrets (Settings → Secrets and variables → Actions):
+You can also do this in the console: Project settings → Your apps → Android → Add
+fingerprint. Then commit the new `google-services.json`, which now has the OAuth client
+entries, and build again. The app currently has Google sign-in turned off on phones
+(`src/session/googleSignIn.native.ts`), so this is only needed when that is added.
 
-| Secret | Value |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | the base64 of `bank-mini-release.jks` |
-| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
-| `ANDROID_KEY_ALIAS` | `bank-mini` |
-| `ANDROID_KEY_PASSWORD` | key password |
+### Local build (alternative)
 
-Never commit the `.jks` file.
-
-Then publish a version:
+You need JDK 17–25 and `ANDROID_HOME=~/Library/Android/sdk`.
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+EXPO_PUBLIC_API_URL=https://api-bank.rumput.tech/api npx expo prebuild --platform android --clean
+cd android && ./gradlew assembleRelease bundleRelease
 ```
 
-The workflow builds `bank-mini-v1.0.0.apk`, signs it and creates the release with notes from
-the commits since the previous tag.
+Then sign with `zipalign` + `apksigner sign --ks <backed-up keystore>`, and run
+`apksigner verify`. Use the **same key** as the EAS builds.
 
-**Push notifications in release builds:** register the release key's SHA-256 (and SHA-1) on
-the Android app in Firebase (Project settings → Your apps → Bank Mini Android → Add
-fingerprint) if you later add Google sign-in; FCM itself works without it.
-`keytool -list -v -keystore bank-mini-release.jks -alias bank-mini` prints them.
+## 2. Verify the APK
+
+```bash
+APK=rumput-bank-mini-android-v0.1.0.apk
+shasum -a 256 $APK
+$ANDROID_HOME/build-tools/37.0.0/apksigner verify --print-certs $APK   # certificate SHA-256
+$ANDROID_HOME/build-tools/37.0.0/aapt2 dump badging $APK | head -1      # package, versionName, versionCode
+unzip -p $APK 'assets/*.bundle' | grep -c 'api-bank.rumput.tech'        # > 0
+unzip -p $APK 'assets/*.bundle' | grep -E 'localhost|10\.0\.2\.2|192\.168\.|bank\.rumput\.tech/api'   # nothing
+```
+
+Install it on a device or a Google Play emulator with `adb install`, and check that the
+sign-in screen reaches the API.
+
+## 3. Publish
+
+```bash
+shasum -a 256 $APK > $APK.sha256
+gh release create v0.1.0 $APK $APK.sha256 --verify-tag --prerelease \
+  --title "Android v0.1.0" --notes "..."
+```
+
+The notes list the version, package ID, version code, EAS build ID, commit SHA, build time
+(UTC), APK SHA-256 and signing certificate SHA-256. The repository is public, so the
+assets must contain no secrets. Download the asset again from the release and check
+`shasum -a 256 -c`.
 
 ## iOS
 
-Not built by CI (needs a Mac with Xcode or EAS, and an Apple developer account). Pushes need
-an APNs key uploaded to Firebase.
+Not built yet. An iOS build needs an Apple developer account and EAS or Xcode. Pushes
+need an APNs key uploaded to Firebase.
+
+## Legacy
+
+These belong to the old layout and are **not used**:
+
+- [.github/workflows/ci-cd.yml](.github/workflows/ci-cd.yml). It deploys a web build to
+  `app.rumput.tech` on a push to `production`, and GitHub Actions is disabled for this
+  account.
+- [.github/workflows/release.yml](.github/workflows/release.yml). It builds the APK on a
+  tag with a keystore from GitHub secrets, which were never set up.
+- [deploy/nginx/app.rumput.tech.conf](deploy/nginx/app.rumput.tech.conf). Its web build
+  calls `/api` on its own origin.
+
+Do not push a `production` branch.

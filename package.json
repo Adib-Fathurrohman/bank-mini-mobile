@@ -1,6 +1,6 @@
 {
   "name": "bank-mini-mobile",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "index.js",
   "dependencies": {
     "@expo/ui": "~58.0.26",

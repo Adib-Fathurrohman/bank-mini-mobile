@@ -2,11 +2,12 @@ import { Platform } from 'react-native'
 
 // Where the Laravel API lives. Override with EXPO_PUBLIC_API_URL (see README):
 // - development: the local backend (a phone on the LAN needs the computer's IP)
-// - production web: same origin, app.rumput.tech/api is proxied to Laravel
-// - production phones: the public API
+// - production phones: the public API (api-bank.rumput.tech; every route is under /api)
+// - web: same origin; no web build of this app is deployed (the API's CORS only
+//   allows the staff site)
 function defaultApiUrl(): string {
   if (__DEV__) return 'http://localhost:8000/api'
-  return Platform.OS === 'web' ? '/api' : 'https://bank.rumput.tech/api'
+  return Platform.OS === 'web' ? '/api' : 'https://api-bank.rumput.tech/api'
 }
 
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL || defaultApiUrl()).replace(/\/$/, '')

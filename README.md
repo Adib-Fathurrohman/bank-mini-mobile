@@ -3,7 +3,7 @@
 The students' app (Expo, React Native and web). Students sign in with the email the
 school registered, activate their account with their NIS, create their own PIN, see
 their balance, history and digital card, and approve or reject withdrawals the teller
-starts at the counter. The staff web app is the `ukk_bank_mini` repository; the API is
+starts at the counter. The staff web app is the `bank-mini-web` repository; the API is
 `bank-mini-laravel` (contract: its `docs/FRONTEND_HANDOFF.md` §15.9–15.11 and
 `docs/API.md`).
 
@@ -46,7 +46,7 @@ Or build in the cloud with EAS (`npx eas-cli@latest build --profile development`
 start Metro with `npx expo start --dev-client`. Android emulators need a **Google Play**
 system image for FCM.
 
-The app talks to `http://localhost:8000/api` in development. A phone on the same
+The app talks to `http://localhost:8000/api` in development (the Android emulator reaches the computer at `http://10.0.2.2:8000/api`). A phone on the same
 Wi-Fi cannot reach `localhost`: create `.env.local` with the computer's address:
 
 ```dotenv
@@ -105,15 +105,14 @@ npm run build:web   # production web build in dist/
 
 ## Production
 
-- **Web** (`https://app.rumput.tech`): `npm run build:web`, served by nginx with `/api`
-  proxied to Laravel on the same origin (a production web build calls `/api` by
-  default). Deployed on a push to `production` by `.github/workflows/ci-cd.yml`.
-- **Android**: push a tag `v1.0.0` and `.github/workflows/release.yml` builds a signed APK
-  and publishes it on the Releases page. Production builds call
-  `https://bank.rumput.tech/api`. The Android package and iOS bundle ID are
+- **Android** (the only distributed build): an APK on the Releases page, built with EAS
+  (`eas.json`, profile `preview`) from a version tag. It calls
+  `https://api-bank.rumput.tech/api`. The Android package and the iOS bundle ID are
   `tech.rumput.bankmini`.
+- **Web**: not deployed. The API's CORS allows only the staff site, so `npm run web` is for
+  local development only.
 
-Setup (secrets, release key, nginx): [DEPLOY.md](DEPLOY.md).
+Build, release key, Firebase fingerprints and publishing are covered in [DEPLOY.md](DEPLOY.md).
 
 ## Known limits
 

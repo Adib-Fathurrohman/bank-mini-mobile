@@ -2,7 +2,7 @@
   "expo": {
     "name": "Bank Mini",
     "slug": "bank-mini",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "bankmini",
@@ -26,6 +26,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "tech.rumput.bankmini",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
@@ -64,6 +65,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4947ce4f-808a-4589-a57c-db1e93775a68"
+      }
+    },
+    "owner": "rumput"
   }
 }
