@@ -14,6 +14,17 @@ export const keys = {
   card: ['card'] as const,
   approvals: ['approvals'] as const,
   approval: (id: string) => ['approvals', id] as const,
+  pinReset: ['pin-reset'] as const,
+}
+
+/** The open forgotten-PIN request, if any. Fetched when the app opens and on a `pin_reset` push. */
+export function usePinResetRequest(enabled = true) {
+  return useQuery({
+    queryKey: keys.pinReset,
+    queryFn: async () => (await customerApi.fetchPinResetRequest()).data,
+    enabled,
+    staleTime: 0,
+  })
 }
 
 /** The teller changes the balance at the counter, so the home screen refreshes it now and then. */

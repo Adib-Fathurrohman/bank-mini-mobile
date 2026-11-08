@@ -11,9 +11,10 @@ starts at the counter. The staff web app is the `bank-mini-web` repository; the 
 
 | Stage | Screens |
 | --- | --- |
-| Signed out | Sign in (email/password; Google on the web), create account, verify email, forgot password, activation with the NIS |
+| Signed out | Sign in: **"Lanjutkan dengan Google" first**, then "Lanjutkan dengan Email" (sign in, create account, forgot password); verify email; activation with the NIS |
 | No PIN yet | Create PIN (after activation, and after an administrator reset) |
-| Locked | PIN unlock (on start, and after a minute in the background) |
+| Locked | PIN unlock (on start, and after a minute in the background), "Lupa PIN?" |
+| Forgotten PIN | Self-service request (fresh sign-in, admin approval, 24-hour wait), status with countdown, cancel, new PIN; or a reset at the counter |
 | App | Home (balance, latest lines, approved requests), approvals (Persetujuan), history, transaction detail, digital card (QR), account (Notifikasi switch, change PIN, change password, statement PDF, lock, sign out), withdrawal approval |
 
 **New withdrawal requests arrive as push notifications** (Firebase Cloud Messaging,
@@ -114,13 +115,40 @@ npm run build:web   # production web build in dist/
 
 Build, release key, Firebase fingerprints and publishing are covered in [DEPLOY.md](DEPLOY.md).
 
+## Sign-in and forgotten PIN
+
+- **Google first.** Every email/password sign-up sends a verification email from Firebase's
+  small daily quota; Google sign-in sends none. Phones use native Google Sign-In
+  (`@react-native-google-signin/google-signin`, `src/session/googleSignIn.native.ts`) with
+  the Firebase web client ID, then `signInWithCredential`. There is no email-link
+  (passwordless) sign-in anywhere.
+- Same email already registered with a password (`auth/account-exists-with-different-credential`):
+  the student signs in with the password first, then the Google credential is linked to that
+  account. Accounts are never chosen by email.
+- Login refusals: `account_not_linked` → NIS activation; `email_not_verified` → verify email;
+  `activation_mismatch` and `firebase_token_invalid` → sign out, with the backend's message.
+- Forgot password: Google accounts are sent to Google account recovery; password accounts get
+  `sendPasswordResetEmail` with one message whatever happens, and a 60-second cooldown.
+- Forgotten PIN (backend v0.1.1, `src/app/pin-reset.tsx`): reset at the counter, or a
+  self-service request that needs a fresh sign-in, an administrator's approval (staff web) and
+  a 24-hour wait. Withdrawals pause while a request is open; the unlock and home screens show
+  it so the real owner can cancel. A `pin_reset` push refreshes the status.
+- Release APKs need the signing key's SHA-1/SHA-256 in Firebase or Google answers
+  `DEVELOPER_ERROR` (see [DEPLOY.md](DEPLOY.md)).
+
+## Logo, icon and splash
+
+From `new logo/` (navy `#1E3A8A`, gold `#F59E0B`): `assets/images/icon.png` (full-bleed),
+the adaptive icon (`android-icon-foreground/background/monochrome.png`, mark inside the
+safe zone), `splash-icon.png` and `favicon.png`, rendered from the SVG with `rsvg-convert`.
+The native splash shows the logo on white; `src/components/AnimatedSplash.tsx` (from
+`animation.ts`) takes over and pulses until the session is loaded. `src/components/LogoMark.tsx`
+is the logo in the app header.
+
 ## Known limits
 
-- **Google sign-in on phones** needs a native module (`@react-native-google-signin`),
-  a development build, and the Android/iOS apps registered in Firebase with their
-  signing keys. Until then phones use email and password; the web version offers
-  Google. A student who created the account with Google can add a password with
-  "Lupa password".
+- An iOS build needs an iOS OAuth client in `GoogleService-Info.plist` (`REVERSED_CLIENT_ID`)
+  for Google sign-in, and an APNs key for pushes.
 - A push can be late or never arrive (permission refused, battery savers, no Google
   Play services); the approvals screen polls as the fallback.
 - The web build has no push (the backend accepts only `android` and `ios` tokens).

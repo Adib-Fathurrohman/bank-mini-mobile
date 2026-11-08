@@ -1,14 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppState, Platform, View } from 'react-native'
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { isApiError } from '@/api/errors'
+import { AnimatedSplash } from '@/components/AnimatedSplash'
 import { Body, Button, Loading, Screen, Title } from '@/components/ui'
 import { PushManager } from '@/push/PushManager'
 import { SessionProvider, useSession } from '@/session/SessionProvider'
 import { colors } from '@/theme'
+
+/**
+ * The animated splash over the app until the session is known. expo-router hides
+ * the native splash (same logo) on the first render, where this is already on top.
+ */
+function Splash() {
+  const { stage } = useSession()
+  const [done, setDone] = useState(false)
+  const finish = useCallback(() => setDone(true), [])
+  if (done) return null
+  return <AnimatedSplash ready={stage !== 'loading'} onDone={finish} />
+}
 
 function makeQueryClient() {
   return new QueryClient({
@@ -61,6 +74,10 @@ function Navigator() {
       <Stack.Protected guard={stage === 'ready'}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
+      {/* Forgotten PIN: from the PIN screen (locked) and from the account screen (ready). */}
+      <Stack.Protected guard={stage === 'locked' || stage === 'ready'}>
+        <Stack.Screen name="pin-reset" />
+      </Stack.Protected>
     </Stack>
   )
 }
@@ -83,6 +100,7 @@ export default function RootLayout() {
           <View style={{ flex: 1 }}>
             <Navigator />
             <PushManager />
+            <Splash />
           </View>
         </SessionProvider>
       </QueryClientProvider>

@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "418347097835-e44sc473tipsvqp9pbuvfl2e4hiqsc8f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "tech.rumput.bankmini",
+            "certificate_hash": "b9722262ebca35ddc3d503be5f1ac1544e1f1a15"
+          }
+        },
+        {
           "client_id": "418347097835-04u09164m68atrthg908gl5slg2ppfvs.apps.googleusercontent.com",
           "client_type": 3
         }

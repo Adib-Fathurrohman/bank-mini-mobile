@@ -4,13 +4,16 @@ import { router } from 'expo-router'
 import { Button, Card, Eyebrow, Row, Screen, Title } from '@/components/ui'
 import { formatDateTime } from '@/lib/format'
 import { NotificationSwitch } from '@/push/NotificationSwitch'
+import { hasPassword, signInMethod } from '@/session/firebaseAuth'
 import { useSession } from '@/session/SessionProvider'
 
 /** The account (`GET /customer/me`) and the security actions. */
 export default function ProfileScreen() {
   const { customer, firebaseUser, lock, signOut } = useSession()
   const [leaving, setLeaving] = useState<'here' | 'all' | null>(null)
-  const hasPassword = firebaseUser?.providerData.some((p) => p.providerId === 'password') ?? false
+  // Change password: `password` accounts only. Google accounts have no app password.
+  const canChangePassword = hasPassword(firebaseUser)
+  const googleManaged = !canChangePassword && signInMethod(firebaseUser) === 'google'
 
   async function leave(allDevices: boolean) {
     setLeaving(allDevices ? 'all' : 'here')
@@ -44,10 +47,18 @@ export default function ProfileScreen() {
         <Button variant="secondary" onPress={() => router.push('/change-pin')}>
           Ubah PIN
         </Button>
-        {hasPassword && (
+        <Button variant="ghost" onPress={() => router.push('/pin-reset')}>
+          Lupa PIN?
+        </Button>
+        {canChangePassword && (
           <Button variant="secondary" onPress={() => router.push('/change-password')}>
             Ubah password
           </Button>
+        )}
+        {googleManaged && (
+          <Card>
+            <Row label="Password">Dikelola oleh Google</Row>
+          </Card>
         )}
         <Button variant="secondary" onPress={() => router.push('/statement')}>
           Unduh mutasi (PDF)

@@ -9,8 +9,12 @@ import { auth } from '@/lib/firebase'
 import { firebaseMessage, freshIdToken } from '@/session/firebaseAuth'
 import { useSession } from '@/session/SessionProvider'
 
-/** Refusals that need a new Firebase sign-in (§15.10 "Activation screen"). */
-const SIGN_IN_AGAIN = ['firebase_token_invalid', 'provider_not_allowed', 'account_inactive']
+/**
+ * Refusals that need a new Firebase sign-in (§15.10 "Activation screen").
+ * activation_mismatch: this Google/email account is not the one the school
+ * registered; sign out so the student can use the registered email.
+ */
+const SIGN_IN_AGAIN = ['firebase_token_invalid', 'provider_not_allowed', 'account_inactive', 'activation_mismatch']
 
 /** First sign-in: link the Firebase account to the account with this NIS. */
 export default function ActivateScreen() {
@@ -39,7 +43,7 @@ export default function ActivateScreen() {
         await endSession({ reason: e.message })
         return
       }
-      // activation_mismatch, already_activated, identity_already_linked, auth_unavailable, ...:
+      // already_activated, identity_already_linked, auth_unavailable, ...:
       // the backend's message as returned.
       setError(firebaseMessage(e))
     } finally {

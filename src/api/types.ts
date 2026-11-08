@@ -96,3 +96,23 @@ export interface Paginated<T> {
 export interface MessageResponse {
   message: string
 }
+
+/** Forgotten-PIN self-service request (backend v0.1.1, API.md "Forgotten PIN: self-service requests"). */
+export type PinResetStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled' | 'expired'
+
+export interface PinResetRequest {
+  id: string
+  status: PinResetStatus
+  status_label: string
+  requested_at: string
+  /** The new PIN can be set from here, once approved. */
+  available_at: string | null
+  /** Approved and `available_at` has passed. */
+  ready: boolean
+  expires_at: string | null
+  approved_at: string | null
+  rejected_at: string | null
+  cancelled_at: string | null
+  completed_at: string | null
+  decision_note: string | null
+}

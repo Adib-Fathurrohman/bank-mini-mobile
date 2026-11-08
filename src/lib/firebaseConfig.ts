@@ -12,6 +12,14 @@ export const firebaseConfig = {
 }
 
 /**
+ * The OAuth "web client" Firebase created for Google sign-in (client_type 3 in
+ * google-services.json). Native Google Sign-In asks Google for an ID token for this
+ * client, which Firebase accepts in GoogleAuthProvider.credential(). Public, not a secret.
+ */
+export const googleWebClientId =
+  process.env.EXPO_PUBLIC_FIREBASE_WEB_CLIENT_ID || '418347097835-04u09164m68atrthg908gl5slg2ppfvs.apps.googleusercontent.com'
+
+/**
  * Local testing only: the Firebase Auth emulator (bank-mini-laravel
  * docs/CUSTOMER_AUTH.md §9), e.g. `http://127.0.0.1:9099`. Never set in a build.
  */

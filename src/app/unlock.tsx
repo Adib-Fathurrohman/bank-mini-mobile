@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { View } from 'react-native'
+import { router } from 'expo-router'
 import * as customerApi from '@/api/customer'
 import { isApiError } from '@/api/errors'
 import { PinPad, PinPadArea } from '@/components/PinPad'
+import { PinResetBanner } from '@/components/PinResetBanner'
 import { Brand } from '@/components/Brand'
-import { Body, LinkButton, Muted, Notice, Screen, Title } from '@/components/ui'
+import { Body, LinkButton, Notice, Screen, Title } from '@/components/ui'
 import { formatDateTime, isInFuture } from '@/lib/format'
 import { useSession } from '@/session/SessionProvider'
 
@@ -49,15 +51,16 @@ export default function UnlockScreen() {
       </View>
       {locked && lockedUntil ? (
         <Notice title={`PIN diblokir sampai ${formatDateTime(lockedUntil)}`}>
-          Salah PIN 3 kali. Coba lagi setelah waktu tersebut, atau minta petugas mereset PIN.
+          Salah PIN 3 kali. Coba lagi setelah waktu tersebut, atau pilih &quot;Lupa PIN?&quot;.
         </Notice>
       ) : (
         error && <Notice>{error}</Notice>
       )}
+      <PinResetBanner />
       <PinPadArea>
         <PinPad label="PIN" value={pin} onChange={setPin} onComplete={(v) => void submit(v)} disabled={pending || locked} />
+        <LinkButton onPress={() => router.push('/pin-reset')}>Lupa PIN?</LinkButton>
         <LinkButton onPress={() => void signOut()}>Keluar dan masuk dengan akun lain</LinkButton>
-        <Muted style={{ textAlign: 'center' }}>Lupa PIN? Minta petugas bank mini untuk mereset.</Muted>
       </PinPadArea>
     </Screen>
   )

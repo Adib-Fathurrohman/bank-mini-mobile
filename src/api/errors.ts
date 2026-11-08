@@ -33,8 +33,10 @@ export class ApiError extends Error {
   readonly code: string | null
   readonly fieldErrors: Record<string, string[]>
   readonly pinFailure: PinFailure | null
-  /** Status of a withdrawal request that can no longer be processed. */
+  /** Status of a withdrawal request that can no longer be processed (also pin_reset_not_usable). */
   readonly requestStatus: string | null
+  /** pin_reset_not_ready: when the new PIN can be set. */
+  readonly availableAt: string | null
 
   constructor(init: {
     kind: ApiErrorKind
@@ -44,6 +46,7 @@ export class ApiError extends Error {
     fieldErrors?: Record<string, string[]>
     pinFailure?: PinFailure | null
     requestStatus?: string | null
+    availableAt?: string | null
   }) {
     super(init.message)
     this.name = 'ApiError'
@@ -53,6 +56,7 @@ export class ApiError extends Error {
     this.fieldErrors = init.fieldErrors ?? {}
     this.pinFailure = init.pinFailure ?? null
     this.requestStatus = init.requestStatus ?? null
+    this.availableAt = init.availableAt ?? null
   }
 
   field(name: string): string | undefined {
@@ -77,7 +81,16 @@ export function errorFromResponse(status: number, body: unknown): ApiError {
   if (status === 401) return new ApiError({ kind: 'unauthorized', status, code, message })
   if (status === 403) return new ApiError({ kind: 'forbidden', status, code, message })
   if (status === 404) return new ApiError({ kind: 'notFound', status, code, message: serverMessage || 'Data tidak ditemukan.' })
-  if (status === 409) return new ApiError({ kind: 'conflict', status, code, message })
+  if (status === 409) {
+    return new ApiError({
+      kind: 'conflict',
+      status,
+      code,
+      message,
+      requestStatus: typeof record.status === 'string' ? record.status : null,
+      availableAt: typeof record.available_at === 'string' ? record.available_at : null,
+    })
+  }
   if (status === 422) {
     if (isRecord(record.errors)) {
       return new ApiError({ kind: 'validation', status, code, message, fieldErrors: record.errors as Record<string, string[]> })

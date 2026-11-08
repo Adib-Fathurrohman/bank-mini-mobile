@@ -94,6 +94,7 @@ export default function ChangePinScreen() {
       <PinPadArea>
         <PinPad label={STEP_TEXT[step].title} value={pin} onChange={setPin} onComplete={onComplete} disabled={pending || locked} />
         {step !== 'current' && <LinkButton onPress={() => restart(null)}>Mulai ulang</LinkButton>}
+        {step === 'current' && <LinkButton onPress={() => router.push('/pin-reset')}>Lupa PIN?</LinkButton>}
       </PinPadArea>
     </Screen>
   )

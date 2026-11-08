@@ -19,7 +19,7 @@ GitHub Actions is not used (see [Legacy](#legacy)).
 
 | Field | Where | Rule |
 | --- | --- | --- |
-| Version name | `app.json` → `expo.version` (and `package.json`) | `0.1.0` for tag `v0.1.0` |
+| Version name | `app.json` → `expo.version` (and `package.json`) | `0.2.0` for tag `v0.2.0` |
 | Version code | `app.json` → `expo.android.versionCode` | +1 for every APK given to anyone, never reused (`eas.json` uses `appVersionSource: local`) |
 | Package | `tech.rumput.bankmini` | Never changes |
 
@@ -77,8 +77,14 @@ firebase apps:sdkconfig ANDROID 1:418347097835:android:9c42c9380716171bdfe8ae --
 
 You can also do this in the console: Project settings → Your apps → Android → Add
 fingerprint. Then commit the new `google-services.json`, which now has the OAuth client
-entries, and build again. The app currently has Google sign-in turned off on phones
-(`src/session/googleSignIn.native.ts`), so this is only needed when that is added.
+entries, and build again. Without this, Google sign-in in a release APK fails with
+`DEVELOPER_ERROR` (code 10).
+
+Done for the EAS release key on 2026-11-08 (SHA-1 `b9722262ebca35ddc3d503be5f1ac1544e1f1a15`,
+SHA-256 `72169017451d9741d048d7e4c24c6b4e121c83a55b912291725a1e17e2df190b`); the committed
+`google-services.json` has the matching Android OAuth client. A local build signed with
+another key (debug keystore) needs its own fingerprints registered before Google sign-in works
+in it.
 
 ### Local build (alternative)
 

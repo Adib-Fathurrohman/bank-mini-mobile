@@ -9,9 +9,9 @@ import {
   onTokenRefresh,
   requestPermission,
 } from '@react-native-firebase/messaging'
-import type { PushPlatform, RequestPush } from './messaging'
+import type { PinResetPush, PushPlatform, RequestPush } from './messaging'
 
-export type { PushPlatform, RequestPush }
+export type { PinResetPush, PushPlatform, RequestPush }
 
 // Firebase Cloud Messaging through React Native Firebase (development build
 // only, not Expo Go). The backend sends to raw FCM tokens, never to Expo's push
@@ -69,4 +69,24 @@ export function onRequestOpened(listener: (id: string) => void): () => void {
 /** App was closed and opened by tapping the notification. */
 export async function getInitialRequestId(): Promise<string | null> {
   return requestId(await getInitialNotification(messaging()))
+}
+
+/**
+ * Forgotten-PIN pushes (pending, approved, rejected, ...): the app refetches the
+ * request status. The real owner learns of a request they did not make.
+ */
+export function onPinResetPush(listener: (push: PinResetPush) => void): () => void {
+  const isPinReset = (message: RemoteMessage | null) => message?.data?.type === 'pin_reset'
+  const offForeground = onMessage(messaging(), async (message) => {
+    if (isPinReset(message)) {
+      listener({ title: message.notification?.title ?? null, body: message.notification?.body ?? null, opened: false })
+    }
+  })
+  const offOpened = onNotificationOpenedApp(messaging(), (message) => {
+    if (isPinReset(message)) listener({ title: null, body: null, opened: true })
+  })
+  return () => {
+    offForeground()
+    offOpened()
+  }
 }

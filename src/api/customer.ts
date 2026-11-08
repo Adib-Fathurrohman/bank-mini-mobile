@@ -7,6 +7,7 @@ import type {
   List,
   MessageResponse,
   Paginated,
+  PinResetRequest,
   Single,
   StatementLine,
   TransactionType,
@@ -39,6 +40,32 @@ export function changePin(currentPin: string, newPin: string, confirmation: stri
     current_pin: currentPin,
     new_pin: newPin,
     new_pin_confirmation: confirmation,
+  })
+}
+
+// Forgotten PIN, self-service (backend v0.1.1): an administrator approves, and the new
+// PIN can be set 24 hours after the request. Withdrawals pause while one is open.
+
+/** The open request, or `data: null`. */
+export function fetchPinResetRequest() {
+  return api.get<{ data: PinResetRequest | null }>('/customer/pin-reset-request')
+}
+
+/** Needs a fresh Firebase sign-in. 201 `pending`; 409 pin_reset_already_requested; 422 pin_not_set. */
+export function requestPinReset(idToken: string) {
+  return api.post<Single<PinResetRequest>>('/customer/pin-reset-requests', { id_token: idToken })
+}
+
+export function cancelPinReset(id: string) {
+  return api.post<Single<PinResetRequest>>(`/customer/pin-reset-requests/${id}/cancel`)
+}
+
+/** Approved and ready: the new PIN, with a fresh Firebase sign-in. */
+export function completePinReset(id: string, idToken: string, pin: string, confirmation: string) {
+  return api.post<MessageResponse>(`/customer/pin-reset-requests/${id}/complete`, {
+    id_token: idToken,
+    pin,
+    pin_confirmation: confirmation,
   })
 }
 

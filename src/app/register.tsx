@@ -40,6 +40,10 @@ export default function RegisterScreen() {
           dan membuat PIN.
         </Body>
       </View>
+      <Notice tone="info">
+        Email sekolah Anda akun Google (misalnya Gmail)? Lebih mudah kembali dan pilih &quot;Lanjutkan dengan Google&quot;:
+        tanpa password baru dan tanpa email verifikasi.
+      </Notice>
       <TextField
         label="Email"
         value={email}

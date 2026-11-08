@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { Brand } from '@/components/Brand'
+import { PinResetBanner } from '@/components/PinResetBanner'
 import { TransactionRow } from '@/components/TransactionRow'
 import { Body, Button, Card, Eyebrow, LinkButton, Loading, Muted, Notice, Screen } from '@/components/ui'
 import { useBalance, useOpenApprovals, useRecentTransactions, useRefreshAccount } from '@/features/queries'
@@ -29,6 +30,7 @@ export default function HomeScreen() {
     <Screen edges={[]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}>
       <Brand />
       <Body>Halo, {customer?.full_name ?? ''}</Body>
+      <PinResetBanner />
 
       <View style={styles.balance}>
         <Text style={styles.balanceLabel}>Saldo tabungan</Text>

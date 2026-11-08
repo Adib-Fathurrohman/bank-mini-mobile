@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useQueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as customerApi from '@/api/customer'
 import { Icon } from '@/components/Icon'
@@ -10,17 +11,21 @@ import { colors, MAX_WIDTH } from '@/theme'
 import {
   getInitialRequestId,
   onForegroundRequest,
+  onPinResetPush,
   onPushTokenRefresh,
   onRequestOpened,
   pushPlatform,
   pushSupported,
-  type RequestPush,
 } from './messaging'
 import { isPushEnabled } from './preference'
 import { setPendingRequest } from './pendingRequest'
 import { registerThisDevice } from './register'
 
 const BANNER_MS = 8_000
+
+type Banner =
+  | { kind: 'request'; id: string; title: string | null; body: string | null }
+  | { kind: 'pinReset'; title: string | null; body: string | null }
 
 /**
  * Push notifications for new withdrawal requests (FRONTEND_HANDOFF.md §15.11):
@@ -32,7 +37,7 @@ export function PushManager() {
   const { stage, customer } = useSession()
   const queryClient = useQueryClient()
   const insets = useSafeAreaInsets()
-  const [banner, setBanner] = useState<RequestPush | null>(null)
+  const [banner, setBanner] = useState<Banner | null>(null)
   const signedIn = (stage === 'locked' || stage === 'ready') && customer?.pin_set === true
   const customerId = customer?.id
 
@@ -53,12 +58,17 @@ export function PushManager() {
     void getInitialRequestId().then((id) => id && setPendingRequest(id))
     const offOpened = onRequestOpened(setPendingRequest)
     const offForeground = onForegroundRequest((push) => {
-      setBanner(push)
+      setBanner({ kind: 'request', ...push })
       void queryClient.invalidateQueries({ queryKey: keys.approvals })
+    })
+    const offPinReset = onPinResetPush((push) => {
+      void queryClient.invalidateQueries({ queryKey: keys.pinReset })
+      if (!push.opened) setBanner({ kind: 'pinReset', title: push.title, body: push.body })
     })
     return () => {
       offOpened()
       offForeground()
+      offPinReset()
     }
   }, [queryClient])
 
@@ -69,21 +79,23 @@ export function PushManager() {
   }, [banner])
 
   if (!banner) return null
+  const fallbackTitle = banner.kind === 'request' ? 'Permintaan penarikan' : 'Reset PIN'
   return (
     <View pointerEvents="box-none" style={[styles.overlay, { top: insets.top + 8 }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLiveRegion="polite"
-        accessibilityLabel={`${banner.title ?? 'Permintaan penarikan'}. ${banner.body ?? ''} Buka.`}
+        accessibilityLabel={`${banner.title ?? fallbackTitle}. ${banner.body ?? ''} Buka.`}
         onPress={() => {
-          setPendingRequest(banner.id)
+          if (banner.kind === 'request') setPendingRequest(banner.id)
+          else if (stage === 'locked' || stage === 'ready') router.push('/pin-reset')
           setBanner(null)
         }}
         style={({ pressed }) => [styles.banner, pressed && { backgroundColor: colors.brand800 }]}
       >
         <Icon name="phone" color={colors.white} size={20} />
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={styles.title}>{banner.title ?? 'Permintaan penarikan'}</Text>
+          <Text style={styles.title}>{banner.title ?? fallbackTitle}</Text>
           {banner.body ? <Text style={styles.body}>{banner.body}</Text> : null}
         </View>
         <Icon name="chevron" color={colors.white} size={18} />

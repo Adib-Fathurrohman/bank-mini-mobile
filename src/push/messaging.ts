@@ -11,6 +11,14 @@ export interface RequestPush {
   body: string | null
 }
 
+/** A step of a forgotten-PIN request (`data.type === "pin_reset"`). */
+export interface PinResetPush {
+  title: string | null
+  body: string | null
+  /** true: the student tapped the notification; false: it arrived while the app was open. */
+  opened: boolean
+}
+
 export const pushSupported = false
 export const pushPlatform: PushPlatform | null = null
 
@@ -36,4 +44,8 @@ export function onRequestOpened(_listener: (id: string) => void): () => void {
 
 export async function getInitialRequestId(): Promise<string | null> {
   return null
+}
+
+export function onPinResetPush(_listener: (push: PinResetPush) => void): () => void {
+  return () => undefined
 }
